@@ -1,0 +1,78 @@
+# mkdir -p /tmp/odoo # Used by PEM parser
+# sudo chown odoo:odoo /tmp/odoo
+# apt update
+# apt install -y git python3-pip python3-m2crypto
+# pip3 install --upgrade pip
+# pip3 install pyOpenSSL "httplib2>=0.7" "git+https://github.com/pysimplesoap/pysimplesoap@stable_py3k" "git+https://github.com/reingart/pyafipws@py3k"
+
+version: '2'
+services:
+
+  web:
+    image: odoo:14.0
+    # mkdir -p /tmp/odoo # Used by PEM parser
+    # apt update
+    # apt install -y git python-m2crypto
+    # pip3 install --upgrade pip
+    # pip3 install pyOpenSSL "httplib2>=0.7" "git+https://github.com/pysimplesoap/pysimplesoap@stable_py3k" "git+https://github.com/reingart/pyafipws@py3k"
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    volumes:
+      # - odoo-web-data:/var/lib/odoo
+      # - ./config:/etc/odoo
+      - ./addons/pyme_accounting:/mnt/extra-addons/pyme_accounting
+      - ./addons/muk_web_theme:/mnt/extra-addons/muk_web_theme
+      # Localizacion Argentina
+      # - ./addons/l10n_ar_account_iva_digital:/mnt/extra-addons/l10n_ar_account_iva_digital
+      # - ./addons/l10n_ar_account_vat_ledger:/mnt/extra-addons/l10n_ar_account_vat_ledger
+      # - ./addons/report_xlsx:/mnt/extra-addons/report_xlsx
+      # - ./addons/account_move_tax:/mnt/extra-addons/account_move_tax
+      # FUNCIONALIDAD: BIENES DE USO
+      - ./addons/om_account_asset:/mnt/extra-addons/om_account_asset
+      # TODO:
+      # - No sirve la regla 'Account Asset Category multi-company' ni 'Account Asset multi-company'
+      # - Averiguar lista de amortizaciones en AFIP y cargar categorias en Odoo
+      - ./addons/contract:/mnt/extra-addons/contract
+      # - ./addons/om_account_asset:/mnt/extra-addons/om_account_asset
+      # FUNCIONALIDAD: MERCADOPAGO
+      # https://www.mercadopago.com.ar/developers/panel/credentials?id=3596692254456339
+      # https://www.mercadopago.com.ar/developers/es/guides/online-payments/checkout-api/testing
+      # pip3 install mercadopago
+      # POST /payment/mercadopago/ipn/
+      # https://www.mercadopago.com.ar/developers/es/reference
+      # 4.22% de comision
+      # https://www.mercadopago.com.ar/ayuda/costo-recibir-pagos_220
+      # TODO: Crear suscripcion?
+      - ./addons/payment_mercadopago:/mnt/extra-addons/payment_mercadopago
+      # FUNCIONALIDAD: CONCILIACION BANCARIA
+      - ./addons/account_reconciliation_widget:/mnt/extra-addons/account_reconciliation_widget
+      # FUNCIONALIDAD: Templates
+      - ./addons/account_move_template:/mnt/extra-addons/account_move_template
+      # FUNCIONALIDAD: Debranding
+      - ./addons/disable_odoo_online:/mnt/extra-addons/disable_odoo_online
+      # FUNCIONALIDAD: FileStorage en S3
+      # https://apps.odoo.com/apps/modules/14.0/ir_attachment_s3/
+      # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html
+      # pip3 install boto3
+      - ./addons/ir_attachment_s3:/mnt/extra-addons/ir_attachment_s3
+      - ./addons/ir_attachment_url:/mnt/extra-addons/ir_attachment_url
+      # aws s3 ls --summarize --human-readable --recursive s3://bucket/folder/*
+      # https://stackoverflow.com/questions/32192391/how-do-i-find-the-total-size-of-my-aws-s3-storage-bucket-or-folder
+
+  db:
+    image: postgres:10
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: hernan@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: odoo
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
